@@ -28,11 +28,11 @@ module game_reward::game_core {
         username: String, // Thêm username vào Entry để hiển thị tên Facebook
     }
 
-    // Tracker lưu thông tin cá nhân và chống Spam
+    // NFT xác định thông tin cá nhân và chống Spam
     public struct DinoNFT has key {
         id: UID,
         last_submit_ms: u64,
-        username: String, // Lưu tên Facebook của người chơi
+        username: String, // Lưu tên của người chơi
     }
 
     // --- Events ---
@@ -50,7 +50,7 @@ module game_reward::game_core {
         });
     }
 
-    // --- Hàm nộp điểm: Kết nối dữ liệu từ Tracker (Facebook) vào Leaderboard ---
+    // --- Hàm nộp điểm: Kết nối dữ liệu từ NFT vào Leaderboard ---
     public fun submit_and_update(
         state: &GlobalState,
         leaderboard: &mut Leaderboard,
@@ -67,7 +67,7 @@ module game_reward::game_core {
 
         tracker.last_submit_ms = now;
 
-        // 2. Cập nhật Leaderboard kèm theo Username từ Facebook đã lưu trong Tracker
+        // 2. Cập nhật Leaderboard kèm theo Username  đã lưu gán cho người dùng ở NFT
         let entry = LeaderboardEntry { 
             player: ctx.sender(), 
             score, 

@@ -1,5 +1,4 @@
 module game_reward::game_score {
-    // Sui tự động import TxContext, transfer, object... nên không cần khai báo lại alias
 
     public struct PlayerScore has key {
         id: UID,
@@ -7,8 +6,6 @@ module game_reward::game_score {
         best_score: u64,
         last_claim_timestamp: u64,
     }
-
-    /// Thêm quyền cho module trong cùng package (reward_manager) được phép gọi
     public(package) fun update_claim_time(score_obj: &mut PlayerScore, now: u64) {
         score_obj.last_claim_timestamp = now;
     }
