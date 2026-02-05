@@ -29,7 +29,7 @@ module game_reward::game_core {
     }
 
     // Tracker lưu thông tin cá nhân và chống Spam
-    public struct PlayerTracker has key {
+    public struct DinoNFT has key {
         id: UID,
         last_submit_ms: u64,
         username: String, // Lưu tên Facebook của người chơi
@@ -54,7 +54,7 @@ module game_reward::game_core {
     public fun submit_and_update(
         state: &GlobalState,
         leaderboard: &mut Leaderboard,
-        tracker: &mut PlayerTracker,
+        tracker: &mut DinoNFT,
         score: u64,
         clock: &Clock,
         ctx: &mut TxContext
@@ -99,12 +99,11 @@ module game_reward::game_core {
         if (l.top_scores.length() > l.max_entries) { l.top_scores.pop_back(); };
     }
 
-    // --- ĐĂNG NHẬP: FE lấy tên Facebook rồi gọi hàm này ---
     public fun join_game_with_facebook(
         fb_name_bytes: vector<u8>, 
         ctx: &mut TxContext
     ) {
-        let tracker = PlayerTracker { 
+        let tracker = DinoNFT { 
             id: object::new(ctx), 
             last_submit_ms: 0,
             username: string::utf8(fb_name_bytes) 
