@@ -1,8 +1,7 @@
 module game_reward::game_core {
     use sui::clock::{Clock};
-    use sui::coin::{Self, TreasuryCap};
     use sui::event;
-    use game_reward::game_coin::{GAME_COIN};
+    use std::string::{Self, String}; // Thêm thư viện String
 
     // --- Errors ---
     const EGamePaused: u64 = 0;
@@ -26,16 +25,18 @@ module game_reward::game_core {
     public struct LeaderboardEntry has store, drop, copy {
         player: address,
         score: u64,
+        username: String, // Thêm username vào Entry để hiển thị tên Facebook
     }
 
-    // Tracker để chống Spam (Rate Limit) - Người chơi sở hữu
+    // Tracker lưu thông tin cá nhân và chống Spam
     public struct PlayerTracker has key {
         id: UID,
         last_submit_ms: u64,
+        username: String, // Lưu tên Facebook của người chơi
     }
 
-    // --- Events (Ghi điểm cộng cực lớn với Giám khảo) ---
-    public struct ScoreEvent has copy, drop { player: address, score: u64 }
+    // --- Events ---
+    public struct ScoreEvent has copy, drop { player: address, score: u64, username: String }
 
     // --- Init ---
     fun init(ctx: &mut TxContext) {
@@ -49,7 +50,7 @@ module game_reward::game_core {
         });
     }
 
-    // --- Hàm nộp điểm "All-in-one" ---
+    // --- Hàm nộp điểm: Kết nối dữ liệu từ Tracker (Facebook) vào Leaderboard ---
     public fun submit_and_update(
         state: &GlobalState,
         leaderboard: &mut Leaderboard,
@@ -60,18 +61,26 @@ module game_reward::game_core {
     ) {
         let now = clock.timestamp_ms();
         
-        // 1. Bảo mật: Check pause & rate limit
+        // 1. Bảo mật
         assert!(!state.is_paused, EGamePaused);
-        assert!(now - tracker.last_submit_ms >= 10000, ESubmitTooFast); // Cooldown 10s cho nhanh
+        assert!(now - tracker.last_submit_ms >= 10000, ESubmitTooFast); 
 
         tracker.last_submit_ms = now;
 
-        // 2. Cập nhật Leaderboard ngay lập tức
-        let entry = LeaderboardEntry { player: ctx.sender(), score };
+        // 2. Cập nhật Leaderboard kèm theo Username từ Facebook đã lưu trong Tracker
+        let entry = LeaderboardEntry { 
+            player: ctx.sender(), 
+            score, 
+            username: tracker.username 
+        };
         update_logic(leaderboard, entry);
 
-        // 3. Bắn Event để Frontend hiện thông báo
-        event::emit(ScoreEvent { player: ctx.sender(), score });
+        // 3. Bắn Event
+        event::emit(ScoreEvent { 
+            player: ctx.sender(), 
+            score, 
+            username: tracker.username 
+        });
     }
 
     fun update_logic(l: &mut Leaderboard, new_e: LeaderboardEntry) {
@@ -90,8 +99,16 @@ module game_reward::game_core {
         if (l.top_scores.length() > l.max_entries) { l.top_scores.pop_back(); };
     }
 
-    // --- Admin: Tạo Tracker cho người chơi mới ---
-    public fun join_game(ctx: &mut TxContext) {
-        transfer::transfer(PlayerTracker { id: object::new(ctx), last_submit_ms: 0 }, ctx.sender());
+    // --- ĐĂNG NHẬP: FE lấy tên Facebook rồi gọi hàm này ---
+    public fun join_game_with_facebook(
+        fb_name_bytes: vector<u8>, 
+        ctx: &mut TxContext
+    ) {
+        let tracker = PlayerTracker { 
+            id: object::new(ctx), 
+            last_submit_ms: 0,
+            username: string::utf8(fb_name_bytes) 
+        };
+        transfer::transfer(tracker, ctx.sender());
     }
 }
